@@ -28,7 +28,7 @@ from bird import BirdSocket
 from flask import Flask, request, abort
 
 app = Flask(__name__)
-app.config.from_pyfile('lg-proxy.cfg')
+app.config.from_pyfile('lgproxy.cfg')
 
 
 def check_accesslist():
