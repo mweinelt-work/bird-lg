@@ -6,7 +6,6 @@
 		<link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
 		<link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/bootstrap-responsive.min.css') }}">
 		<link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/docs.css') }}">
-		<link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/DT_bootstrap.css') }}">
 	</head>
 	<body>
 		<div class="navbar navbar-fixed-top">
@@ -18,7 +17,7 @@
 						<span class="icon-bar"></span>
 						<span class="icon-bar"></span>
 					</a>
-					<a class="brand" href="/">{{config.DOMAIN}} / Looking Glass</a>
+					<a class="brand" href="/">{{config.DOMAIN}} / looking glass</a>
 					<div class="navbar nav-collapse">
 						<ul class="nav nav-pills">
 							<li class="navbar-text">Nodes:&nbsp;&nbsp;</li>
@@ -64,15 +63,11 @@
 		<div class="container-fluid">
 			<div class="row-fluid">
 				<div class="span8">
-					{% if warnings %}
-					<div class="alert alert-warning">
-                        {% for warning in warnings %}{{warning}}<br />{% endfor %}
-                    </div>
+					{% if warning %}
+					<div class="alert alert-warning">{{warning|safe}}</div>
 					{% endif %}
-					{% if errors %}
-					<div class="alert alert-error">
-						{% for error in errors %}{{error}}<br />{% endfor %}
-                    </div>
+					{% if error %}
+					<div class="alert alert-error">{{error|safe}}</div>
 					{% endif %}
 
 					{% block body %}{% endblock %}
@@ -116,11 +111,10 @@
 		</div>
 		<script type="text/javascript" src="{{url_for('static', filename='js/jquery.js') }}"></script>
 		<script type="text/javascript" src="{{url_for('static', filename='js/bootstrap.min.js') }}"></script>
-        <script type="text/javascript" src="{{url_for('static', filename='js/jquery.dataTables.js') }}"></script>
-        <script type="text/javascript" src="{{url_for('static', filename='js/DT_bootstrap.js') }}"></script>
+		<script type="text/javascript" src="{{url_for('static', filename='js/jquery-impromptu.3.2.min.js') }}"></script>
 		<script type="text/javascript">
 			request_type = "{{session.request_type}}";
-			request_args = "{{session.request_args|safe}}";
+			request_args = "{{session.request_args}}";
 			hosts = "{{session.hosts}}";
 			proto = "{{session.proto}}";
 			history_query = {{session.history|tojson|safe}};

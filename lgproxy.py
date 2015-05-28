@@ -20,10 +20,6 @@
 ###
 
 
-import sys
-import logging
-from logging.handlers import TimedRotatingFileHandler
-from logging import FileHandler
 import subprocess
 from urllib import unquote
 
@@ -32,101 +28,35 @@ from bird import BirdSocket
 from flask import Flask, request, abort
 
 app = Flask(__name__)
-app.debug = app.config["DEBUG"]
-app.config.from_pyfile('lgproxy.cfg')
-
-file_handler = TimedRotatingFileHandler(filename=app.config["LOG_FILE"], when="midnight")
-app.logger.setLevel(getattr(logging, app.config["LOG_LEVEL"].upper()))
-app.logger.addHandler(file_handler)
-
-
-@app.before_request
-def access_log_before(*args, **kwargs):
-    app.logger.info("[%s] request %s, %s", request.remote_addr, request.url, "|".join(["%s:%s" % (k, v) for k, v in request.headers.items()]))
-
-
-@app.after_request
-def access_log_after(response, *args, **kwargs):
-    app.logger.info("[%s] reponse %s, %s", request.remote_addr, request.url, response.status_code)
-    return response
+app.config.from_pyfile('lg-proxy.cfg')
 
 
 def check_accesslist():
-    acl = app.config["ACCESS_LIST"]
-    if acl and request.remote_addr not in acl:
-        app.logger.warning("Remote address not in ACCESS_LIST: %s", request.remote_addr)
-	abort(401)
-
-
-def check_features():
-    features = app.config.get('FEATURES', [])
-    if features and request.endpoint not in features:
-        app.logger.warning("Requested endpoint not in FEATURES: %s", request.endpoint)
+    if app.config["ACCESS_LIST"] and \
+            request.remote_addr not in app.config["ACCESS_LIST"]:
         abort(401)
-
-
-@app.route("/ping")
-@app.route("/ping6")
-def ping():
-    check_accesslist()
-    check_features()
-
-    src = []
-    if request.path == '/ping':
-        ping = 'ping'
-        if app.config.get("IPV4_SOURCE", ""):
-            src = ["-I", app.config.get("IPV4_SOURCE")]
-    else:
-        ping = 'ping6'
-        if app.config.get("IPV6_SOURCE", ""):
-            src = ["-I", app.config.get("IPV6_SOURCE")]
-
-    query = request.args.get("q", "")
-    query = unquote(query)
-
-    options = ['-c4', '-i1', '-w5']
-
-    command = [ping] + src + options + [query]
-    result = subprocess.Popen(command, stdout=subprocess.PIPE).communicate()[0].decode('utf-8', 'ignore').replace("\n", "<br>")
-
-    return result
 
 
 @app.route("/traceroute")
 @app.route("/traceroute6")
 def traceroute():
     check_accesslist()
-    check_features()
-
-    if sys.platform.startswith('freebsd') or sys.platform.startswith('netbsd') or sys.platform.startswith('openbsd'):
-        traceroute4 = ['traceroute']
-        traceroute6 = ['traceroute6']
-    else:  # For Linux
-        traceroute4 = ['traceroute', '-4']
-        traceroute6 = ['traceroute', '-6']
-
     src = []
     if request.path == '/traceroute6':
-        traceroute = traceroute6
-        if app.config.get("IPV6_SOURCE", ""):
-            src = ["-s", app.config.get("IPV6_SOURCE")]
+        o = "-6"
+    if app.config.get("IPV6_SOURCE", ""):
+        src = ["-s",  app.config.get("IPV6_SOURCE")]
     else:
-        traceroute = traceroute4
-        if app.config.get("IPV4_SOURCE", ""):
-            src = ["-s", app.config.get("IPV4_SOURCE")]
+        o = "-4"
+    if app.config.get("IPV4_SOURCE", ""):
+        src = ["-s",  app.config.get("IPV4_SOURCE")]
 
     query = request.args.get("q", "")
     query = unquote(query)
 
-    if sys.platform.startswith('freebsd') or sys.platform.startswith('netbsd'):
-        options = ['-a', '-q1', '-w1', '-m15']
-    elif sys.platform.startswith('openbsd'):
-        options = ['-A', '-q1', '-w1', '-m15']
-    else:  # For Linux
-        options = ['-A', '-q1', '-N32', '-w1', '-m15']
-    command = traceroute + src + options + [query]
+    command = ['traceroute', o] + src \
+        + ['-A', '-q1', '-N32', '-w1', '-m15', query]
     result = subprocess.Popen(command, stdout=subprocess.PIPE).communicate()[0].decode('utf-8', 'ignore').replace("\n", "<br>")
-
     return result
 
 
@@ -134,12 +64,11 @@ def traceroute():
 @app.route("/bird6")
 def bird():
     check_accesslist()
-    check_features()
 
     if request.path == "/bird":
-        b = BirdSocket(file=app.config.get('BIRD_SOCKET'))
+        b = BirdSocket(file="/run/bird/bird.ctl")
     elif request.path == "/bird6":
-        b = BirdSocket(file=app.config.get('BIRD6_SOCKET'))
+        b = BirdSocket(file="/run/bird/bird6.ctl")
     else:
         return "No bird socket selected"
 
@@ -153,6 +82,5 @@ def bird():
 
 
 if __name__ == "__main__":
-    app.logger.info("lgproxy start")
-    app.run(app.config.get("BIND_IP", "0.0.0.0"), app.config.get("BIND_PORT", 5000))
-
+    app.debug = True
+    app.run("0.0.0.0", port=5002)

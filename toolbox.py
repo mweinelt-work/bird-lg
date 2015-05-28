@@ -19,51 +19,29 @@
 #
 ###
 
-from dns import resolver, reversename
-
+from dns import resolver
 import socket
 import pickle
-import xml.parsers.expat
-import re
-
-from flask import Flask
-
-
-resolv = resolver.Resolver()
-resolv.timeout = 0.5
-resolv.lifetime = 1
-
-app = Flask(__name__)
-app.config.from_pyfile('lg.cfg')
 
 
 def resolve(n, q):
-    return str(resolv.query(n, q)[0])
+	return str(resolver.query(n,q)[0])
 
-def resolve_ptr(ip):
-    ptr = str(resolve(reversename.from_address(ip), 'PTR')).lower()
-    ptr = ptr.replace(app.config.get('ROUTER_NAME_REMOVE', ''), '')
-    return ptr
-
-
-asname_regex = re.compile("(ASName|as-name):\s+(?P<name>\S+)")
-
-def get_asname_from_whois(data):
-    r = asname_regex.search(data)
-    if not r:
-        return 'UNKNOWN-AS'
-    return r.groupdict()['name']
-
+def get_asn_from_as(n):
+    try:
+	data = resolve("AS%s.asn.cymru.com" % n ,"TXT").replace("'","").replace('"','')
+    except:
+	data = "%s | EU | unknown | 2000-00-00 | Unknown AS" % n
+    return [ field.strip() for field in data.split("|") ]
 
 def mask_is_valid(n):
-    if not n:
-        return True
-    try:
-        mask = int(n)
-        return (mask >= 1 and mask <= 128)
-    except:
-        return False
-
+	if not n: 
+		return True
+	try:
+		mask = int(n)
+		return ( mask >= 1 and mask <= 128)
+	except:
+		return False
 
 def ipv4_is_valid(n):
     try:
@@ -72,7 +50,6 @@ def ipv4_is_valid(n):
     except socket.error:
         return False
 
-
 def ipv6_is_valid(n):
     try:
         socket.inet_pton(socket.AF_INET6, n)
@@ -80,49 +57,20 @@ def ipv6_is_valid(n):
     except socket.error:
         return False
 
-
 def save_cache_pickle(filename, data):
-    output = open(filename, 'wb')
-    pickle.dump(data, output)
-    output.close()
+	output = open(filename, 'wb')
+	pickle.dump(data, output)
+	output.close()
 
+def load_cache_pickle(filename, default = None):
+	try:
+		pkl_file = open(filename, 'rb')
+	except IOError:
+		return default
+	try:
+		data = pickle.load(pkl_file)
+	except:
+		data = default
+	pkl_file.close()
+	return data
 
-def load_cache_pickle(filename, default=None):
-    try:
-        pkl_file = open(filename, 'rb')
-    except IOError:
-        return default
-    try:
-        data = pickle.load(pkl_file)
-    except:
-        data = default
-    pkl_file.close()
-    return data
-
-
-def unescape(s):
-    want_unicode = False
-    if isinstance(s, unicode):
-        s = s.encode("utf-8")
-        want_unicode = True
-
-    # the rest of this assumes that `s` is UTF-8
-    list = []
-
-    # create and initialize a parser object
-    p = xml.parsers.expat.ParserCreate("utf-8")
-    p.buffer_text = True
-    p.returns_unicode = want_unicode
-    p.CharacterDataHandler = list.append
-
-    # parse the data wrapped in a dummy element
-    # (needed so the "document" is well-formed)
-    p.Parse("<e>", 0)
-    p.Parse(s, 0)
-    p.Parse("</e>", 1)
-
-    # join the extracted strings and return
-    es = ""
-    if want_unicode:
-        es = u""
-    return es.join(list)
