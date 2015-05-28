@@ -156,7 +156,7 @@ class BirdSocket:
 				elif code == "0000":
 					return True, parsed_string
 				elif code in SUCCESS_CODES.keys():
-					return True, SUCCESS_CODES.get(code)
+					return True, SUCCESS_CODES.get(code) + ": " + line[5:] + "\n"
 				elif code in ERROR_CODES.keys():
 					return False, ERROR_CODES.get(code)
 				elif code[0] in [ "1", "2"] :
