@@ -114,8 +114,6 @@ def bird_proxy(host, proto, service, query):
     if not port or not path:
         return False, "Host/Proto not allowed"
     else:
-        if host == 'lg02':
-            host = 'lg01'
         url = "http://%s.%s:%d/%s?q=%s" % (host, app.config["DOMAIN"], port, path, quote(query))
         try:
             f = urlopen(url)
