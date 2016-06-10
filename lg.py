@@ -368,7 +368,7 @@ def show_bgpmap():
     nodes = {}
     edges = {}
 
-	
+
     def escape(label):
         label = label.replace("&", "&amp;")
         label = label.replace(">", "&gt;")
@@ -586,4 +586,4 @@ def show_route(request_type, hosts, proto):
 app.secret_key = app.config["SESSION_KEY"]
 app.debug = True
 if __name__ == "__main__":
-    app.run("0.0.0.0")
+    app.run(app.config["BIND_IP"], app.config["BIND_PORT"])
