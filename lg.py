@@ -47,12 +47,11 @@ def add_links(text):
     ret_text = []
     for line in text:
         # Some heuristic to create link
-        if line.strip().startswith("BGP.as_path:") or \
-            line.strip().startswith("Neighbor AS:"):
+        if line.strip().startswith("BGP.as_path:") or line.strip().startswith("Neighbor AS:"):
+            line = re.sub(r'AS(\d+)', r'<a href="/whois/\1" class="whois">AS\1</a>', line)
             ret_text.append(re.sub(r'(\d+)', r'<a href="/whois/\1" class="whois">\1</a>', line))
         else:
             line = re.sub(r'([a-zA-Z0-9\-]*\.([a-zA-Z]{2,3}){1,2})(\s|$)', r'<a href="/whois/\1" class="whois">\1</a>\3', line)
-            line = re.sub(r'AS(\d+)', r'<a href="/whois/\1" class="whois">AS\1</a>', line)
             line = line.replace(' unreachable ', '\n', 1)
             line = re.sub(r'(\d+\.\d+\.\d+\.\d+)', r'<a href="/whois/\1" class="whois">\1</a>', line)
             hosts = "/".join(request.path.split("/")[2:])
@@ -127,8 +126,8 @@ def bird_proxy(host, proto, service, query):
 @app.context_processor
 def inject_commands():
     commands = [
-            ("summary", "show protocols"),
-            ("detail", "show protocols ... all"),
+            #("summary", "show protocols"),
+            #("detail", "show protocols ... all"),
             ("prefix_detail", "show route for ... all"),
             ("prefix_bgpmap", "show route for ... (bgpmap)"),
         ]
@@ -144,7 +143,7 @@ def inject_all_host():
 
 @app.route("/")
 def hello():
-    return redirect("/prefix_detail/%s/ipv4?q=www.nlnog.net" % "+".join(app.config["PROXY"].keys()))
+    return redirect("/prefix_detail/%s/ipv4?q=www.man-da.de" % "+".join(app.config["PROXY"].keys()))
 
 
 @app.route("/query/<path:query>")
